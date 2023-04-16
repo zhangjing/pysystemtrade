@@ -1,4 +1,6 @@
 import datetime
+import sys
+
 import pandas as pd
 import numpy as np
 
@@ -6,9 +8,10 @@ from sysinit.futures.build_roll_calendars import (
     generate_approximate_calendar,
     adjust_to_price_series,
     back_out_roll_calendar_from_multiple_prices,
+    generate_openinterest_calendar,
 )
 from sysobjects.dict_of_futures_per_contract_prices import (
-    dictFuturesContractFinalPrices,
+    dictFuturesContractFinalPrices, dictFuturesContractOpenInterest, dictFuturesContractTotalOpenInterest
 )
 from sysobjects.multiple_prices import futuresMultiplePrices
 
@@ -42,24 +45,31 @@ class rollCalendar(pd.DataFrame):
         rollCalendar,
         dict_of_futures_contract_prices: dictFuturesContractFinalPrices,
         roll_parameters_object: rollParameters,
+        dict_of_futures_contract_open_interest: dictFuturesContractOpenInterest = None,
+        dict_of_futures_contract_total_open_interest: dictFuturesContractTotalOpenInterest = None,
     ):
         """
 
         :param roll_parameters_object: roll parameters specific to this instrument
         :param dict_of_futures_contract_prices: dict, keys are contract date ids 'yyyymmdd'
         """
+        #print(roll_parameters_object)
+        if roll_parameters_object.roll_logic_type == 0:
+            approx_calendar = generate_approximate_calendar(
+                roll_parameters_object, dict_of_futures_contract_prices
+            )
 
-        approx_calendar = generate_approximate_calendar(
-            roll_parameters_object, dict_of_futures_contract_prices
-        )
+            adjusted_calendar = adjust_to_price_series(
+                approx_calendar, dict_of_futures_contract_prices
+            )
 
-        adjusted_calendar = adjust_to_price_series(
-            approx_calendar, dict_of_futures_contract_prices
-        )
+            roll_calendar = rollCalendar(adjusted_calendar)
 
-        roll_calendar = rollCalendar(adjusted_calendar)
-
-        return roll_calendar
+            return roll_calendar
+        elif roll_parameters_object.roll_logic_type == -1: #on openinterest
+            open_interest_calendar = generate_openinterest_calendar(roll_parameters_object, dict_of_futures_contract_prices, \
+                                                                    dict_of_futures_contract_open_interest, dict_of_futures_contract_total_open_interest)
+            return rollCalendar(open_interest_calendar)
 
     @classmethod
     def back_out_from_multiple_prices(

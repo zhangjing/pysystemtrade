@@ -50,11 +50,13 @@ def build_and_write_roll_calendar(
         instrument_code
     )
     dict_of_futures_contract_prices = dict_of_all_futures_contract_prices.final_prices()
+    dict_of_futures_contract_open_interest = dict_of_all_futures_contract_prices.daily_open_interest()
+    dict_of_futures_contract_total_open_interest = dict_of_all_futures_contract_prices.total_open_interest()
 
     # might take a few seconds
     print("Prepping roll calendar... might take a few seconds")
     roll_calendar = rollCalendar.create_from_prices(
-        dict_of_futures_contract_prices, roll_parameters
+        dict_of_futures_contract_prices, roll_parameters, dict_of_futures_contract_open_interest, dict_of_futures_contract_total_open_interest
     )
 
     # checks - this might fail

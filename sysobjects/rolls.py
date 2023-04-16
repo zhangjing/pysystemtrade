@@ -198,6 +198,8 @@ class rollParameters(object):
         roll_offset_day: int = 0,
         carry_offset: int = -1,
         approx_expiry_offset: int = 0,
+        roll_logic_type: int = 0,
+        data_available_last_day: datetime.date = None,
     ):
         """
 
@@ -216,6 +218,8 @@ class rollParameters(object):
         self._roll_offset_day = int(roll_offset_day)
         self._carry_offset = int(carry_offset)
         self._approx_expiry_offset = int(approx_expiry_offset)
+        self._roll_logic_type = int(roll_logic_type)
+        self._data_available_last_day = data_available_last_day
 
     @property
     def roll_offset_day(self):
@@ -229,6 +233,14 @@ class rollParameters(object):
     def approx_expiry_offset(self):
         return self._approx_expiry_offset
 
+    @property
+    def roll_logic_type(self):
+        return self._roll_logic_type
+
+    @property
+    def data_available_last_day(self):
+        return self._data_available_last_day
+
     def __eq__(self, other):
         return (
             (self.hold_rollcycle == other.hold_rollcycle)
@@ -237,6 +249,7 @@ class rollParameters(object):
             & (self.roll_offset_day == other.roll_offset_day)
             & (self.carry_offset == other.carry_offset)
             & (self.approx_expiry_offset == other.approx_expiry_offset)
+            & (self.data_available_last_day == other.data_available_last_day)
         )
 
     def __repr__(self):
@@ -273,6 +286,7 @@ class rollParameters(object):
             roll_offset_day=self.roll_offset_day,
             carry_offset=self.carry_offset,
             approx_expiry_offset=self.approx_expiry_offset,
+            roll_logic_type=self.roll_logic_type,
         )
 
     def rolls_per_year_in_hold_cycle(self) -> int:

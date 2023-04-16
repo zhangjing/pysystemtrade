@@ -1,3 +1,4 @@
+import sys
 from collections import namedtuple
 from copy import copy
 
@@ -7,7 +8,7 @@ import pandas as pd
 from syscore.exceptions import missingData
 from sysobjects.contract_dates_and_expiries import contractDate
 from sysobjects.dict_of_futures_per_contract_prices import (
-    dictFuturesContractFinalPrices,
+    dictFuturesContractFinalPrices, dictFuturesContractOpenInterest, dictFuturesContractTotalOpenInterest,
 )
 from sysobjects.multiple_prices import futuresMultiplePrices
 from sysobjects.roll_parameters_with_price_data import (
@@ -44,6 +45,26 @@ def generate_approximate_calendar(
     )
 
     return approx_calendar
+
+def generate_openinterest_calendar(roll_parameters_object: rollParameters,
+    dict_of_futures_contract_prices: dictFuturesContractFinalPrices,
+    dict_of_futures_contract_open_interest: dictFuturesContractOpenInterest,
+    dict_of_futures_contract_total_open_interest: dictFuturesContractTotalOpenInterest,
+                      ) -> pd.DataFrame:
+    """
+    :param roll_parameters_object:
+    :param dict_of_futures_contract_prices:
+    :return:
+    """
+    try:
+        earliest_contract_with_roll_data = find_earliest_held_contract_with_price_data(
+            roll_parameters_object, dict_of_futures_contract_prices, dict_of_futures_contract_open_interest, dict_of_futures_contract_total_open_interest
+        )
+    except missingData:
+        raise Exception("Can't find any valid starting contract!")
+
+    open_interest_calendar = _create_calendar_by_open_interest_from_earliest_contract(earliest_contract_with_roll_data)
+    return open_interest_calendar
 
 
 INDEX_NAME = "current_roll_date"
@@ -87,6 +108,26 @@ class _listOfRollCalendarRows(list):
         last_row = self[-1]
         return last_row.roll_date
 
+def _create_calendar_by_open_interest_from_earliest_contract(
+        earliest_contract_with_roll_data: contractWithRollParametersAndPrices,
+) -> pd.DataFrame:
+    roll_calendar_as_list = _listOfRollCalendarRows()
+
+    dict_of_futures_contract_prices = earliest_contract_with_roll_data.prices
+    final_contract_date_str = dict_of_futures_contract_prices.last_contract_date_str()
+    current_contract = earliest_contract_with_roll_data
+
+    while current_contract.date_str < final_contract_date_str:
+        #current_contract.update_expiry_with_offset_from_parameters()
+        next_contract, new_row = _get_new_row_of_roll_calendar(current_contract)
+        if new_row is _bad_row:
+            break
+
+        roll_calendar_as_list.append(new_row)
+        current_contract = copy(next_contract)
+
+    roll_calendar = roll_calendar_as_list.to_pd_df()
+    return roll_calendar
 
 def _create_approx_calendar_from_earliest_contract(
     earliest_contract_with_roll_data: contractWithRollParametersAndPrices,
@@ -107,8 +148,8 @@ def _create_approx_calendar_from_earliest_contract(
             break
 
         roll_calendar_as_list.append(new_row)
+        #print(f'new_row:{new_row}')
         current_contract = copy(next_contract)
-        print(current_contract)
 
     roll_calendar = roll_calendar_as_list.to_pd_df()
 
@@ -151,7 +192,48 @@ def _get_new_row_of_roll_calendar(
             )
         )
 
-    current_roll_date = current_contract.desired_roll_date
+    if roll_parameters.roll_logic_type == 0:
+        current_roll_date = current_contract.desired_roll_date
+    elif roll_parameters.roll_logic_type == -1:
+        #logic here~~
+        current_open_interest = current_contract.open_interest[current_contract.date_str]
+        next_open_interest = next_contract.open_interest[next_contract.date_str]
+        current_total_open_interest = current_contract.total_open_interest[current_contract.date_str]
+        combined_df = current_open_interest.to_frame('current_oi').merge(next_open_interest.to_frame('next_oi'), left_index=True, right_index=True, how='left')
+        combined_df = combined_df.merge(current_total_open_interest.to_frame('total_oi'), left_index=True, right_index=True, how='left')
+        combined_df['less_open_interest'] = combined_df['current_oi'] < combined_df['next_oi']
+        combined_df['oi_percent'] = (combined_df['current_oi'] + combined_df['next_oi'])/combined_df['total_oi']
+        first_less_day, second_less_day = None, None
+        find_suitable_day = False
+        for k, v in combined_df.iterrows():
+            if v['oi_percent'] < 0.5:
+                first_less_day, second_less_day = None, None
+                continue
+            if first_less_day is None:
+                if v['less_open_interest'] == False:
+                    continue
+                else:
+                    first_less_day = k
+            else:
+                if v['less_open_interest'] == False:
+                    first_less_day = None
+                else:
+                    second_less_day = k
+                    find_suitable_day = True
+                    break
+        if find_suitable_day:
+            current_roll_date = second_less_day
+        else:
+            #if the contract last day is the data available day, drop it
+            print(f'current_contract:{current_contract.date_str} next_contract:{next_contract.date_str}')
+            if roll_parameters.data_available_last_day is not None and combined_df.index[-1].date() == roll_parameters.data_available_last_day:
+                print(f'hit data_available_last_day {roll_parameters.data_available_last_day} {combined_df.index[-1].date()}')
+                return current_contract, _bad_row
+            else:
+                current_roll_date = combined_df.index[-1]
+            #print(f'------------last day: {current_roll_date} {current_contract.date_str} {next_contract.date_str}')
+    else:
+        raise Exception(f'unsupported roll logic type: {roll_parameters.roll_logic_type}')
     new_row = _rollCalendarRow(
         current_roll_date,
         current_contract.date_str,

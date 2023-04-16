@@ -9,9 +9,11 @@ from syscore.pandas.frequency import (
 from syscore.pandas.merge_data_keeping_past_data import merge_newer_data
 from syscore.pandas.full_merge_with_replacement import full_merge_of_existing_data
 
-PRICE_DATA_COLUMNS = sorted(["OPEN", "HIGH", "LOW", "FINAL", "VOLUME"])
+PRICE_DATA_COLUMNS = sorted(["OPEN", "HIGH", "LOW", "FINAL", "VOLUME", "OPEN_INTEREST", "TOTAL_OPEN_INTEREST"])
 FINAL_COLUMN = "FINAL"
 VOLUME_COLUMN = "VOLUME"
+OPEN_INTEREST_COLUMN = "OPEN_INTEREST"
+TOTAL_OPEN_INTEREST_COLUMN = "TOTAL_OPEN_INTEREST"
 NOT_VOLUME_COLUMNS = sorted(["OPEN", "HIGH", "LOW", "FINAL"])
 
 VERY_BIG_NUMBER = 999999.0
@@ -104,6 +106,14 @@ class futuresContractPrices(pd.DataFrame):
         )
 
         return daily_volumes
+
+    def daily_open_interest(self) -> pd.Series:
+        data = self[OPEN_INTEREST_COLUMN]
+        return data
+
+    def total_open_interest(self) -> pd.Series:
+        data = self[TOTAL_OPEN_INTEREST_COLUMN]
+        return data
 
     def merge_with_other_prices(
         self,

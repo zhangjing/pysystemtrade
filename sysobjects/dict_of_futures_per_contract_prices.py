@@ -76,7 +76,18 @@ class dictFuturesContractVolumes(dictFuturesContractFinalPrices):
         )
         return object_repr
 
-
+class dictFuturesContractOpenInterest(dictFuturesContractFinalPrices):
+    def __repr__(self):
+        object_repr = "Dict of futures contract openinterest with %d contracts" % len(
+            self.keys()
+        )
+        return object_repr
+class dictFuturesContractTotalOpenInterest(dictFuturesContractFinalPrices):
+    def __repr__(self):
+        object_repr = "Dict of futures contract [total] openinterest with %d contracts" % len(
+            self.keys()
+        )
+        return object_repr
 class dictFuturesContractPrices(dict):
     """
     A dict of futures contract prices
@@ -126,7 +137,34 @@ class dictFuturesContractPrices(dict):
 
         return volumes_dict
 
+    def daily_open_interest(self) -> dictFuturesContractOpenInterest:
+        """
 
+        :return: dict of daily openinterest
+        """
+
+        all_contract_ids = list(self.keys())
+        openinterest_dict_as_list = []
+        for contract_id in all_contract_ids:
+            openinterest = self[contract_id].daily_open_interest()
+            openinterest.name = contract_id
+            openinterest_dict_as_list.append((contract_id, openinterest))
+
+        openinterest_dict = dictFuturesContractOpenInterest(openinterest_dict_as_list)
+
+        return openinterest_dict
+
+    def total_open_interest(self) -> dictFuturesContractTotalOpenInterest:
+        all_contract_ids = list(self.keys())
+        total_open_interest_dict_as_list = []
+        for contract_id in all_contract_ids:
+            total_open_interest = self[contract_id].total_open_interest()
+            total_open_interest.name = contract_id
+            total_open_interest_dict_as_list.append((contract_id, total_open_interest))
+
+        total_open_interest_dict = dictFuturesContractTotalOpenInterest(total_open_interest_dict_as_list)
+
+        return total_open_interest_dict
 def get_last_matched_date_and_prices_for_contract_list(
     dict_of_prices: dictFuturesContractPrices,
     contracts_to_match: list,

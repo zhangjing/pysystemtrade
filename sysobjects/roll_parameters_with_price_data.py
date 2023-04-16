@@ -3,7 +3,7 @@ from syscore.exceptions import missingData
 from sysobjects.rolls import contractDateWithRollParameters, rollParameters
 from sysobjects.contracts import contractDate
 from sysobjects.dict_of_futures_per_contract_prices import (
-    dictFuturesContractFinalPrices,
+    dictFuturesContractFinalPrices, dictFuturesContractOpenInterest, dictFuturesContractTotalOpenInterest,
 )
 from sysobjects.contract_dates_and_expiries import listOfContractDateStr
 
@@ -20,6 +20,8 @@ class contractWithRollParametersAndPrices(object):
         self,
         contract_with_roll_parameters: contractDateWithRollParameters,
         dict_of_final_price_data: dictFuturesContractFinalPrices,
+        dict_of_open_interest_data: dictFuturesContractOpenInterest = None,
+        dict_of_total_open_interest_data: dictFuturesContractTotalOpenInterest = None
     ):
         """
 
@@ -29,6 +31,8 @@ class contractWithRollParametersAndPrices(object):
 
         self._contract = contract_with_roll_parameters
         self._prices = dict_of_final_price_data
+        self._open_interest = dict_of_open_interest_data
+        self._total_open_interest = dict_of_total_open_interest_data
 
     @property
     def contract(self):
@@ -37,6 +41,14 @@ class contractWithRollParametersAndPrices(object):
     @property
     def prices(self):
         return self._prices
+
+    @property
+    def open_interest(self):
+        return self._open_interest
+
+    @property
+    def total_open_interest(self):
+        return self._total_open_interest
 
     @property
     def roll_parameters(self):
@@ -57,13 +69,13 @@ class contractWithRollParametersAndPrices(object):
     def next_held_contract(self):
         next_held_contract_with_roll_parameters = self.contract.next_held_contract()
         return contractWithRollParametersAndPrices(
-            next_held_contract_with_roll_parameters, self.prices
+            next_held_contract_with_roll_parameters, self.prices, self.open_interest, self.total_open_interest
         )
 
     def next_priced_contract(self):
         next_priced_contract_with_roll_parameters = self.contract.next_priced_contract()
         return contractWithRollParametersAndPrices(
-            next_priced_contract_with_roll_parameters, self.prices
+            next_priced_contract_with_roll_parameters, self.prices, self.open_interest, self.total_open_interest
         )
 
     def previous_priced_contract(self):
@@ -71,7 +83,7 @@ class contractWithRollParametersAndPrices(object):
             self.contract.previous_priced_contract()
         )
         return contractWithRollParametersAndPrices(
-            previous_priced_contract_with_roll_parameters, self.prices
+            previous_priced_contract_with_roll_parameters, self.prices, self.open_interest, self.total_open_interest
         )
 
     def previous_held_contract(self):
@@ -79,7 +91,7 @@ class contractWithRollParametersAndPrices(object):
             self.contract.previous_held_contract()
         )
         return contractWithRollParametersAndPrices(
-            previous_held_contract_with_roll_parameters, self.prices
+            previous_held_contract_with_roll_parameters, self.prices, self.open_interest, self.total_open_interest
         )
 
     def find_next_held_contract_with_price_data(self):
@@ -225,7 +237,8 @@ class contractWithRollParametersAndPrices(object):
 
 
 def find_earliest_held_contract_with_price_data(
-    roll_parameters_object: rollParameters, price_dict: dictFuturesContractFinalPrices
+    roll_parameters_object: rollParameters, price_dict: dictFuturesContractFinalPrices, open_interest_dict: dictFuturesContractOpenInterest = None,
+        total_open_interest_dict: dictFuturesContractTotalOpenInterest = None
 ) -> contractWithRollParametersAndPrices:
     """
     Find the earliest contract we can hold in a given list of contract dates
@@ -237,7 +250,7 @@ def find_earliest_held_contract_with_price_data(
     list_of_contract_dates = price_dict.sorted_contract_date_str()
 
     earliest_contract = _find_earliest_held_contract_with_data(
-        list_of_contract_dates, roll_parameters_object, price_dict
+        list_of_contract_dates, roll_parameters_object, price_dict, open_interest_dict, total_open_interest_dict
     )
 
     return earliest_contract
@@ -247,10 +260,12 @@ def _find_earliest_held_contract_with_data(
     list_of_contract_dates: listOfContractDateStr,
     roll_parameters_object: rollParameters,
     price_dict: dictFuturesContractFinalPrices,
+    open_interest_dict: dictFuturesContractOpenInterest=None,
+    total_open_interest_dict: dictFuturesContractTotalOpenInterest=None
 ) -> contractWithRollParametersAndPrices:
 
     try_contract = _initial_contract_to_try_with(
-        list_of_contract_dates, roll_parameters_object, price_dict
+        list_of_contract_dates, roll_parameters_object, price_dict, open_interest_dict, total_open_interest_dict
     )
     final_contract_date = list_of_contract_dates[-1]
 
@@ -272,6 +287,8 @@ def _initial_contract_to_try_with(
     list_of_contract_dates: list,
     roll_parameters_object: rollParameters,
     price_dict: dictFuturesContractFinalPrices,
+    open_interest_dict: dictFuturesContractOpenInterest,
+    total_open_interest_dict: dictFuturesContractTotalOpenInterest
 ) -> contractWithRollParametersAndPrices:
 
     plausible_earliest_contract_date = list_of_contract_dates[0]
@@ -282,11 +299,9 @@ def _initial_contract_to_try_with(
         ),
         roll_parameters_object,
     )
-
     try_contract = contractWithRollParametersAndPrices(
-        plausible_earliest_contract, price_dict
+        plausible_earliest_contract, price_dict, open_interest_dict, total_open_interest_dict
     )
-
     return try_contract
 
 
