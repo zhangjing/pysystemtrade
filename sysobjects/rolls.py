@@ -200,6 +200,8 @@ class rollParameters(object):
         approx_expiry_offset: int = 0,
         roll_logic_type: int = 0,
         data_available_last_day: datetime.date = None,
+        open_interest_percent_threshold: float = 0.2,
+        open_interest_continue_day: int = 2,
     ):
         """
 
@@ -220,6 +222,8 @@ class rollParameters(object):
         self._approx_expiry_offset = int(approx_expiry_offset)
         self._roll_logic_type = int(roll_logic_type)
         self._data_available_last_day = data_available_last_day
+        self._open_interest_percent_threshold = open_interest_percent_threshold
+        self._open_interest_continue_day = open_interest_continue_day
 
     @property
     def roll_offset_day(self):
@@ -241,6 +245,14 @@ class rollParameters(object):
     def data_available_last_day(self):
         return self._data_available_last_day
 
+    @property
+    def open_interest_percent_threshold(self):
+        return self._open_interest_percent_threshold
+
+    @property
+    def open_interest_continue_day(self):
+        return self._open_interest_continue_day
+
     def __eq__(self, other):
         return (
             (self.hold_rollcycle == other.hold_rollcycle)
@@ -250,6 +262,8 @@ class rollParameters(object):
             & (self.carry_offset == other.carry_offset)
             & (self.approx_expiry_offset == other.approx_expiry_offset)
             & (self.data_available_last_day == other.data_available_last_day)
+            & (self.open_interest_percent_threshold == other.open_interest_percent_threshold)
+            & (self.open_interest_continue_day == self.open_interest_continue_day)
         )
 
     def __repr__(self):
@@ -287,6 +301,9 @@ class rollParameters(object):
             carry_offset=self.carry_offset,
             approx_expiry_offset=self.approx_expiry_offset,
             roll_logic_type=self.roll_logic_type,
+            data_available_last_day=self.data_available_last_day,
+            open_interest_percent_threshold=self.open_interest_percent_threshold,
+            open_interest_continue_day=self.open_interest_continue_day
         )
 
     def rolls_per_year_in_hold_cycle(self) -> int:

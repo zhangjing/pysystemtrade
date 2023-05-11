@@ -205,6 +205,23 @@ def _get_new_row_of_roll_calendar(
         combined_df['oi_percent'] = (combined_df['current_oi'] + combined_df['next_oi'])/combined_df['total_oi']
         first_less_day, second_less_day = None, None
         find_suitable_day = False
+        suitable_day = None
+        days = 0
+
+        for k, v in combined_df.iterrows():
+            if days == roll_parameters.open_interest_continue_day:
+                suitable_day = k
+                break
+
+            if v['oi_percent'] < roll_parameters.open_interest_percent_threshold:
+                days = 0
+                continue
+            if days < roll_parameters.open_interest_continue_day:
+                if v['less_open_interest'] == False:
+                    days = 0
+                else:
+                    days += 1
+        '''
         for k, v in combined_df.iterrows():
             if v['oi_percent'] < 0.5:
                 first_less_day, second_less_day = None, None
@@ -223,6 +240,9 @@ def _get_new_row_of_roll_calendar(
                     break
         if find_suitable_day:
             current_roll_date = second_less_day
+        '''
+        if suitable_day is not None:
+            current_roll_date = suitable_day
         else:
             #if the contract last day is the data available day, drop it
             print(f'current_contract:{current_contract.date_str} next_contract:{next_contract.date_str}')
