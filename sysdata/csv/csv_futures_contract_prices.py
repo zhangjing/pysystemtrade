@@ -266,6 +266,13 @@ class csvFuturesContractPriceData(futuresContractPriceData):
                 keyname_as_list[2],
             ]
 
+        if len(keyname_as_list) == 5:
+            keyname_as_list = [
+                "%s_%s_%s_%s"
+                % (keyname_as_list[0], keyname_as_list[1], keyname_as_list[2], keyname_as_list[3]),
+                keyname_as_list[4],
+            ]
+
         try:
             assert len(keyname_as_list) == 2
         except BaseException:
