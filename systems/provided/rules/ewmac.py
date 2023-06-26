@@ -1,6 +1,14 @@
 from sysquant.estimators.vol import robust_vol_calc
 
 
+def ewmac_forecast_no_vol(price, Lfast=32, Lslow=128):
+    fast_ewma = price.ewm(span=Lfast, min_periods=1).mean()
+    slow_ewma = price.ewm(span=Lslow, min_periods=1).mean()
+    raw_ewmac = fast_ewma - slow_ewma
+    raw_ewmac.loc[raw_ewmac>0] = 1
+    raw_ewmac.loc[raw_ewmac<0] = -1
+    return raw_ewmac
+
 def ewmac_forecast_with_defaults(price, Lfast=32, Lslow=128):
     """
     ONLY USED FOR EXAMPLES

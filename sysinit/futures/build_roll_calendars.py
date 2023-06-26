@@ -98,6 +98,12 @@ def _create_approx_calendar_from_earliest_contract(
     # The roll date is the last day we hold the current contract
     dict_of_futures_contract_prices = earliest_contract_with_roll_data.prices
     final_contract_date_str = dict_of_futures_contract_prices.last_contract_date_str()
+    #last_data_day = None
+    #for key in dict_of_futures_contract_prices:
+    #    if last_data_day is None:
+    #        last_data_day = dict_of_futures_contract_prices[key].index[-1]
+    #    elif dict_of_futures_contract_prices[key].index[-1] > last_data_day:
+    #        last_data_day = dict_of_futures_contract_prices[key].index[-1]
     current_contract = earliest_contract_with_roll_data
 
     while current_contract.date_str < final_contract_date_str:
@@ -105,10 +111,13 @@ def _create_approx_calendar_from_earliest_contract(
         next_contract, new_row = _get_new_row_of_roll_calendar(current_contract)
         if new_row is _bad_row:
             break
+        #if new_row.roll_date > last_data_day:
+        #    print("drop row(exceed the %s):%s" % (last_data_day, new_row))
+        #    break
 
         roll_calendar_as_list.append(new_row)
         current_contract = copy(next_contract)
-        print(current_contract)
+        #print(current_contract)
 
     roll_calendar = roll_calendar_as_list.to_pd_df()
 
@@ -191,11 +200,23 @@ def adjust_to_price_series(
     adjusted_roll_calendar_as_list = _listOfRollCalendarRows()
     idx_of_last_row_in_data = len(approx_calendar.index) - 1
 
+    last_data_day = None
+    for key in dict_of_futures_contract_prices:
+        if last_data_day is None:
+            last_data_day = dict_of_futures_contract_prices[key].index[-1]
+        elif dict_of_futures_contract_prices[key].index[-1] > last_data_day:
+            last_data_day = dict_of_futures_contract_prices[key].index[-1]
+
     for row_number in range(len(approx_calendar.index)):
         local_row_data = _get_local_data_for_row_number(
             approx_calendar, row_number, idx_of_last_row_in_data
         )
+
         if local_row_data is _last_row:
+            break
+
+        if local_row_data.current_row.name > last_data_day:
+            print('\nroll date exceed %s\n' % last_data_day)
             break
 
         adjusted_row = _adjust_row_of_approx_roll_calendar(
@@ -536,8 +557,9 @@ def _print_adjustment_message(
     local_row_data: localRowData, adjusted_row: _rollCalendarRow
 ):
     print(
-        "Changed date from %s to %s for row with contracts %s"
+        "Shift %s, Changed date from %s to %s for row with contracts %s"
         % (
+            (adjusted_row.roll_date - local_row_data.current_row.name).days,
             str(local_row_data.current_row.name),
             str(adjusted_row.roll_date),
             str(adjusted_row.items()),

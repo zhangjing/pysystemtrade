@@ -57,11 +57,23 @@ def build_and_write_roll_calendar(
         dict_of_futures_contract_prices, roll_parameters
     )
 
+    print(roll_calendar)
     # checks - this might fail
-    roll_calendar.check_if_date_index_monotonic()
+    if not roll_calendar.check_if_date_index_monotonic():
+        print("\n\ndate monotonic check fail")
+        #return False, 'data index monotonic check failed'
+    else:
+        print("\n\ndate monotonic check succeed")
 
     # this should never fail
-    roll_calendar.check_dates_are_valid_for_prices(dict_of_futures_contract_prices)
+    # should we add the volume check??
+    if not roll_calendar.check_dates_are_valid_for_prices(dict_of_futures_contract_prices):
+        print('\n\ncheck dates contain price fail')
+        return False, 'data contain price check failed'
+    else:
+        print('\n\ncheck dates contain price succeed')
+
+
 
     # Write to csv
     # Will not work if an existing calendar exists
@@ -82,7 +94,7 @@ def build_and_write_roll_calendar(
         else:
             print("Not writing - not happy")
 
-    return roll_calendar
+    return True, roll_calendar
 
 
 def check_saved_roll_calendar(

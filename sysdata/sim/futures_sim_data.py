@@ -176,6 +176,8 @@ class futuresSimData(simData):
         instr_object = self.get_instrument_object_with_meta_data(instrument_code)
         meta_data = instr_object.meta_data
         block_move_value = meta_data.Pointsize
+        if meta_data.MiniPointsize != 0:
+            block_move_value = meta_data.MiniPointsize
 
         return block_move_value
 

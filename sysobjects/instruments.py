@@ -48,6 +48,7 @@ META_FIELD_LIST = [
     "Percentage",
     "PerTrade",
     "Region",
+    "MiniPointsize",
 ]
 
 
@@ -79,6 +80,7 @@ class instrumentMetaData(object):
         Percentage: float = 0.0,
         PerTrade: float = 0.0,
         Region: str = "",
+        MiniPointsize: float = 0.0,
     ):
 
         self.Description = Description
@@ -89,6 +91,7 @@ class instrumentMetaData(object):
         self.Percentage = _zero_if_nan(Percentage)
         self.PerTrade = _zero_if_nan(PerTrade)
         self.Region = Region
+        self.MiniPointsize = _zero_if_nan(MiniPointsize)
 
     def as_dict(self) -> dict:
         keys = META_FIELD_LIST

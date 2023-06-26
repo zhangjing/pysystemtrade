@@ -49,10 +49,12 @@ class rollCalendar(pd.DataFrame):
         :param dict_of_futures_contract_prices: dict, keys are contract date ids 'yyyymmdd'
         """
 
+        print("\n\ngenerate desired roll calendar:")
         approx_calendar = generate_approximate_calendar(
             roll_parameters_object, dict_of_futures_contract_prices
         )
 
+        print("\n\nuse price to adjust roll date:")
         adjusted_calendar = adjust_to_price_series(
             approx_calendar, dict_of_futures_contract_prices
         )
@@ -116,6 +118,7 @@ class rollCalendar(pd.DataFrame):
                 checks_okay = False
 
         return checks_okay
+
 
 
 def _check_row_of_row_calendar(
