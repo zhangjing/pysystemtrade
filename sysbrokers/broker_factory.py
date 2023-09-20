@@ -7,6 +7,9 @@ from sysbrokers.IB.ib_contract_position_data import ibContractPositionData
 from sysbrokers.IB.ib_orders import ibExecutionStackData
 from sysbrokers.IB.ib_static_data import ibStaticData
 from sysbrokers.IB.ib_fx_handling import ibFxHandlingData
+
+from sysbrokers.CTP.ctp_capital_data import ctpCapitalData
+from sysbrokers.CTP.ctp_static_data import ctpStaticData
 from syscore.objects import resolve_function
 from sysdata.data_blob import dataBlob
 
@@ -44,3 +47,9 @@ def get_ib_class_list():
         ibFuturesInstrumentData,
         ibFxHandlingData,
     ]
+
+
+def get_ctp_class_list():
+    return [
+        ctpCapitalData,
+        ctpStaticData]

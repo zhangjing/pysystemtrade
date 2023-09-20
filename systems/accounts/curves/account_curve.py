@@ -241,6 +241,12 @@ class accountCurve(pd.Series):
             sharpe = np.nan
         return sharpe
 
+    def rolling_sharpe(self, span=1):
+        times_per_year = int(from_frequency_to_times_per_year(self.frequency))
+        rolling_mean = self.rolling(int(times_per_year*span)).mean()
+        rolling_std = self.rolling(int(times_per_year*span)).std()
+        rolling_sharpe = np.sqrt(times_per_year) * (rolling_mean) / rolling_std
+        return rolling_sharpe
     def drawdown(self):
         x = self.curve()
         return drawdown(x)
@@ -252,6 +258,10 @@ class accountCurve(pd.Series):
     def worst_drawdown(self):
         dd = self.drawdown()
         return np.nanmin(dd.values)
+
+    def worst_drawdown_date(self):
+        dd = self.drawdown()
+        return np.nanargmin(dd.values)
 
     def time_in_drawdown(self):
         dd = self.drawdown().dropna()
@@ -365,6 +375,8 @@ class accountCurve(pd.Series):
             "sortino",
             "avg_drawdown",
             "time_in_drawdown",
+            "worst_drawdown",
+            "worst_drawdown_date",
             "calmar",
             "avg_return_to_drawdown",
             "avg_loss",
@@ -374,6 +386,8 @@ class accountCurve(pd.Series):
             "hitrate",
             "t_stat",
             "p_value",
+            'quant_ratio_lower',
+            'quant_ratio_upper'
         ]
 
         build_stats = []

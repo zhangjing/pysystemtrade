@@ -1,6 +1,7 @@
 from copy import copy
 
 from sysbrokers.IB.ib_connection import connectionIB
+from sysbrokers.CTP.ctp_connection import connectionCTP
 from syscore.objects import get_class_name
 from syscore.constants import arg_not_supplied
 from syscore.text import camel_case_split
@@ -18,6 +19,7 @@ class dataBlob(object):
         log_name: str = "",
         csv_data_paths: dict = arg_not_supplied,
         ib_conn: connectionIB = arg_not_supplied,
+        ctp_conn: connectionCTP = arg_not_supplied,
         mongo_db: mongoDb = arg_not_supplied,
         log: pst_logger = arg_not_supplied,
         keep_original_prefix: bool = False,
@@ -60,6 +62,7 @@ class dataBlob(object):
 
         self._mongo_db = mongo_db
         self._ib_conn = ib_conn
+        self._ctp_conn = ctp_conn
         self._log = log
         self._log_name = log_name
         self._csv_data_paths = csv_data_paths
@@ -99,6 +102,7 @@ class dataBlob(object):
         prefix = self._get_class_prefix(class_object)
         class_dict = dict(
             ib=self._add_ib_class,
+            ctp=self._add_ctp_class,
             csv=self._add_csv_class,
             arctic=self._add_arctic_class,
             mongo=self._add_mongo_class,
@@ -129,6 +133,20 @@ class dataBlob(object):
             msg = (
                 "Error %s couldn't evaluate %s(self.ib_conn, self, log = self.log.setup(component = %s)) This might be because (a) IB gateway not running, or (b) import is missing\
                          or (c) arguments don't follow pattern"
+                % (str(e), class_name, class_name)
+            )
+            self._raise_and_log_error(msg)
+
+        return resolved_instance
+
+    def _add_ctp_class(self, class_object):
+        log = self._get_specific_logger(class_object)
+        try:
+            resolved_instance = class_object(self.ctp_conn, self, log=log)
+        except Exception as e:
+            class_name = get_class_name(class_object)
+            msg = (
+                "Error %s couldn't evaluate %s(self.ctp_conn, self, log = self.log.setup(component = %s))"
                 % (str(e), class_name, class_name)
             )
             self._raise_and_log_error(msg)
@@ -262,6 +280,9 @@ class dataBlob(object):
             self.ib_conn.close_connection()
             self.db_ib_broker_client_id.release_clientid(self.ib_conn.client_id())
 
+        if self._ctp_conn is not arg_not_supplied:
+            self.ctp_conn.close_connection()
+
         # No need to explicitly close Mongo connections; handled by Python garbage collection
         self.log.close_log_file()
 
@@ -273,6 +294,15 @@ class dataBlob(object):
             self._ib_conn = ib_conn
 
         return ib_conn
+
+    @property
+    def ctp_conn(self) -> connectionCTP:
+        ctp_conn = getattr(self, "_ctp_conn", arg_not_supplied)
+        if ctp_conn is arg_not_supplied:
+            ctp_conn = self._get_new_ctp_connection()
+            self._ctp_conn = ctp_conn
+
+        return ctp_conn
 
     def _get_new_ib_connection(self) -> connectionIB:
         # Try this 5 times...
@@ -293,7 +323,18 @@ class dataBlob(object):
                     for id in failed_ids:
                         self.db_ib_broker_client_id.release_clientid(id)
                     raise e
-
+    def _get_new_ctp_connection(self) -> connectionCTP:
+        # Try this 5 times...
+        attempts = 0
+        failed_ids = []
+        while True:
+            try:
+                ctp_conn = connectionCTP(log=self.log)
+                return ctp_conn
+            except Exception as e:
+                attempts += 1
+                if attempts > 5:
+                    raise e
     def _get_next_client_id_for_ib(self) -> int:
         ## default to tracking ID through mongo change if required
         self.add_class_object(mongoIbBrokerClientIdData)
@@ -343,7 +384,7 @@ class dataBlob(object):
         return log_name
 
 
-source_dict = dict(arctic="db", mongo="db", csv="db", ib="broker")
+source_dict = dict(arctic="db", mongo="db", csv="db", ib="broker", ctp="broker")
 
 
 def identifying_name(split_up_name: list, keep_original_prefix=False) -> str:
